@@ -1,0 +1,12 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Flask: app2.py",
+            "type": "debugpy", 
+            "request": "launch",
+            "program": "${workspaceFolder}/app2.py",
+            "console": "integratedTerminal"
+        }
+    ]
+}

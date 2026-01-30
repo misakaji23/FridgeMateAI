@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>在庫管理</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background-color: #f5f5f5;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background-color: white;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      h1 {
+        color: #333;
+        border-bottom: 3px solid #4caf50;
+        padding-bottom: 10px;
+        margin-bottom: 30px;
+      }
+      h2 {
+        color: #333;
+        margin-top: 30px;
+        border-bottom: 2px solid #ddd;
+        padding-bottom: 10px;
+      }
+      .inventory-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 20px 0;
+        background-color: white;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .inventory-table thead {
+        background-color: #4caf50;
+        color: white;
+      }
+      .inventory-table th {
+        padding: 15px;
+        text-align: left;
+        font-weight: bold;
+      }
+      .inventory-table td {
+        padding: 15px;
+        border-bottom: 1px solid #eee;
+      }
+      .inventory-table tbody tr:hover {
+        background-color: #f9f9f9;
+        transition: background-color 0.2s;
+      }
+      .inventory-table tbody tr:last-child td {
+        border-bottom: none;
+      }
+      .item-name {
+        font-weight: bold;
+        color: #2c3e50;
+      }
+      .item-quantity {
+        text-align: center;
+        font-weight: bold;
+        color: #2196f3;
+      }
+      .item-category {
+        color: #555;
+      }
+      .item-expiry {
+        color: #666;
+      }
+      .expiry-warning {
+        color: #f44336;
+        font-weight: bold;
+      }
+      .expiry-soon {
+        color: #ff9800;
+        font-weight: bold;
+      }
+      .action-buttons {
+        display: flex;
+        gap: 5px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .btn {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background-color 0.3s, transform 0.2s;
+        text-decoration: none;
+        display: inline-block;
+      }
+      .btn:hover {
+        transform: translateY(-2px);
+      }
+      .btn-delete {
+        background-color: #f44336;
+        color: white;
+      }
+      .btn-delete:hover {
+        background-color: #d32f2f;
+      }
+      .btn-increase {
+        background-color: #4caf50;
+        color: white;
+        padding: 8px 12px;
+        font-size: 18px;
+        font-weight: bold;
+      }
+      .btn-increase:hover {
+        background-color: #45a049;
+      }
+      .btn-decrease {
+        background-color: #ff9800;
+        color: white;
+        padding: 8px 12px;
+        font-size: 18px;
+        font-weight: bold;
+      }
+      .btn-decrease:hover {
+        background-color: #f57c00;
+      }
+      .btn-primary {
+        background-color: #2196f3;
+        color: white;
+        padding: 12px 24px;
+        font-size: 16px;
+        margin: 20px 0;
+      }
+      .btn-primary:hover {
+        background-color: #1976d2;
+      }
+      .alert-section {
+        background-color: #ffebee;
+        border-left: 4px solid #f44336;
+        padding: 20px;
+        margin: 20px 0;
+        border-radius: 5px;
+      }
+      .alert-section h2 {
+        color: #f44336;
+        margin-top: 0;
+        border-bottom: 2px solid #f44336;
+      }
+      .alert-section ul {
+        margin: 10px 0;
+        padding-left: 20px;
+      }
+      .alert-section li {
+        margin: 8px 0;
+        color: #c62828;
+        font-weight: bold;
+      }
+      .form-group {
+        margin: 15px 0;
+      }
+      .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+        color: #555;
+      }
+      .form-group input,
+      .form-group select {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-size: 16px;
+        box-sizing: border-box;
+      }
+      .form-group input:focus,
+      .form-group select:focus {
+        outline: none;
+        border-color: #4caf50;
+        box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
+      }
+      .header-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      .recipe-button-section {
+        text-align: center;
+        margin: 20px 0;
+      }
+      /* スマホ向けカード形式の在庫アイテム（非表示） */
+      .inventory-card-mobile {
+        display: none;
+      }
+
+      @media (max-width: 768px) {
+        body {
+          padding: 5px;
+          background-color: #f5f5f5;
+        }
+        .container {
+          padding: 10px;
+          border-radius: 5px;
+          margin: 0;
+        }
+        h1 {
+          font-size: 18px;
+          margin-bottom: 10px;
+          padding-bottom: 8px;
+        }
+        h2 {
+          font-size: 16px;
+          margin-top: 15px;
+          padding-bottom: 5px;
+        }
+
+        /* テーブルをコンパクトに */
+        .inventory-table {
+          font-size: 12px;
+          margin: 10px 0;
+        }
+        .inventory-table thead {
+          font-size: 11px;
+        }
+        .inventory-table th {
+          padding: 6px 4px;
+          font-weight: bold;
+        }
+        .inventory-table td {
+          padding: 6px 4px;
+          vertical-align: middle;
+        }
+        .item-name {
+          font-size: 13px;
+          max-width: 80px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .item-quantity {
+          font-size: 14px;
+          text-align: center;
+          min-width: 35px;
+        }
+        .item-category {
+          font-size: 11px;
+          max-width: 60px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .item-expiry {
+          font-size: 10px;
+          max-width: 70px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        /* ボタンをコンパクトに */
+        .action-buttons {
+          display: flex;
+          gap: 3px;
+          flex-wrap: wrap;
+        }
+        .btn {
+          padding: 4px 8px;
+          font-size: 11px;
+          min-height: 32px;
+          border-radius: 4px;
+        }
+        .btn-delete {
+          padding: 4px 6px;
+          font-size: 10px;
+        }
+        .btn-increase,
+        .btn-decrease {
+          padding: 4px 8px;
+          font-size: 16px;
+          min-width: 32px;
+        }
+
+        /* アラートセクションをコンパクトに */
+        .alert-section {
+          padding: 10px;
+          margin: 10px 0;
+        }
+        .alert-section h2 {
+          font-size: 14px;
+          margin-top: 0;
+          padding-bottom: 5px;
+        }
+        .alert-section ul {
+          padding-left: 20px;
+          margin: 5px 0;
+        }
+        .alert-section li {
+          font-size: 11px;
+          margin: 3px 0;
+        }
+
+        /* ヘッダーアクション */
+        .header-actions {
+          flex-direction: column;
+          align-items: flex-start;
+          margin-bottom: 15px;
+        }
+        .header-actions h1 {
+          font-size: 18px;
+          margin-bottom: 10px;
+          width: 100%;
+        }
+        .header-actions .btn-primary {
+          width: 100%;
+          padding: 10px;
+          font-size: 14px;
+        }
+
+        /* フォームセクションをコンパクトに */
+        .add-item-section {
+          padding: 10px;
+          margin: 10px 0;
+        }
+        .add-item-section h2 {
+          font-size: 14px;
+          margin-top: 10px;
+        }
+        .form-group {
+          margin: 8px 0;
+        }
+        .form-group label {
+          font-size: 12px;
+          margin-bottom: 3px;
+        }
+        .form-group input,
+        .form-group select {
+          padding: 8px;
+          font-size: 14px;
+          min-height: 36px;
+        }
+        .btn-primary {
+          padding: 8px 16px;
+          font-size: 14px;
+          min-height: 36px;
+        }
+      }
+
+      /* より小さいスマホ向け（480px以下） */
+      @media (max-width: 480px) {
+        body {
+          padding: 3px;
+        }
+        .container {
+          padding: 8px;
+        }
+        h1 {
+          font-size: 16px;
+          margin-bottom: 8px;
+        }
+        .inventory-table {
+          font-size: 11px;
+        }
+        .inventory-table th {
+          padding: 5px 3px;
+          font-size: 10px;
+        }
+        .inventory-table td {
+          padding: 5px 3px;
+        }
+        .item-name {
+          font-size: 12px;
+          max-width: 70px;
+        }
+        .btn {
+          padding: 3px 6px;
+          font-size: 10px;
+          min-height: 28px;
+        }
+        .btn-increase,
+        .btn-decrease {
+          min-width: 28px;
+          font-size: 14px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <!-- ヘッダーセクション -->
+        <div class="header-actions" style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div style="flex: 1;">
+                <h1 style="margin: 0; margin-bottom: 15px;">📦 在庫一覧</h1>
+                <form action="/recipes" method="get" style="display:inline;">
+                    <button type="submit" class="btn btn-primary" style="margin: 0;">🍳 レシピ提案を見る</button>
+                </form>
+            </div>
+            
+            <!-- QRコード表示エリア -->
+            {% if qr_code %}
+            <div style="margin-left: 20px; text-align: center;">
+                <div style="background: white; padding: 10px; border-radius: 8px; border: 1px solid #eee; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+                    <p style="margin: 0 0 5px 0; font-size: 12px; font-weight: bold; color: #555;">スマホでアクセス</p>
+                    <img src="data:image/png;base64,{{ qr_code }}" alt="Access QR Code" style="width: 100px; height: 100px; display: block;">
+                </div>
+            </div>
+            {% endif %}
+
+            <div style="margin-left: 20px;">
+                <img src="{{ url_for('static', filename='images/mascot.png') }}" alt="シェフ" style="max-height: 180px; width: auto; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));">
+            </div>
+        </div>
+
+      <!-- 🔔 アラート表示エリア -->
+      {% if alerts %}
+      <div class="alert-section">
+        <h2>⚠ 賞味期限アラート</h2>
+        <ul>
+          {% for msg in alerts %}
+          <li>{{ msg }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+
+      <!-- 在庫テーブル（PC用） -->
+      <table class="inventory-table">
+        <thead>
+          <tr>
+            <th>名前</th>
+            <th>数量</th>
+            <th>分類</th>
+            <th>賞味期限</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if items %} {% for item in items %}
+          <tr>
+            <td class="item-name">{{ item.name }}</td>
+            <td class="item-quantity">{{ item.quantity }}</td>
+            <td class="item-category">{{ item.category or '-' }}</td>
+            <td class="item-expiry">
+              {% if item.expiry_date %} {{ item.expiry_date }} {% else %} - {%
+              endif %}
+            </td>
+            <td>
+              <div class="action-buttons">
+                <form
+                  action="{{ url_for('delete_item', item_id=item['id']) }}"
+                  method="post"
+                  style="display: inline"
+                >
+                  <button
+                    type="submit"
+                    class="btn btn-delete"
+                    onclick="return confirm('本当に削除しますか？');"
+                  >
+                    削除
+                  </button>
+                </form>
+                <form
+                  action="{{ url_for('increase', item_id=item['id']) }}"
+                  method="post"
+                  style="display: inline"
+                >
+                  <button type="submit" class="btn btn-increase">＋</button>
+                </form>
+                <form
+                  action="{{ url_for('decrease', item_id=item['id']) }}"
+                  method="post"
+                  style="display: inline"
+                >
+                  <button type="submit" class="btn btn-decrease">－</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %} {% else %}
+          <tr>
+            <td
+              colspan="5"
+              style="text-align: center; padding: 15px; color: #666"
+            >
+              在庫がありません
+            </td>
+          </tr>
+          {% endif %}
+        </tbody>
+      </table>
+
+      <!-- 商品追加セクション -->
+      <div class="add-item-section">
+        <h2>商品を追加</h2>
+        <form action="/add" method="post">
+          <div class="form-group">
+            <label for="name">名前:</label>
+            <input type="text" id="name" name="name" required />
+          </div>
+          <div class="form-group">
+            <label for="quantity">数量:</label>
+            <input
+              type="number"
+              id="quantity"
+              name="quantity"
+              value="0"
+              min="0"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="category">カテゴリ:</label>
+            <select id="category" name="category" required>
+              <option value="">選択してください</option>
+              <option value="野菜・果物">野菜・果物</option>
+              <option value="肉類・魚介類">肉類・魚介類</option>
+              <option value="乳製品">乳製品</option>
+              <option value="加工品">加工品</option>
+              <option value="主食">主食</option>
+              <option value="その他">その他</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="expiry_date">賞味期限:</label>
+            <input type="date" id="expiry_date" name="expiry_date" />
+          </div>
+          <button type="submit" class="btn btn-primary">追加</button>
+        </form>
+      </div>
+    </div>
+  </body>
+</html>

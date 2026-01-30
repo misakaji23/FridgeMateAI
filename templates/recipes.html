@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>レシピ推薦</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background-color: #f5f5f5;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background-color: white;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      h1 {
+        color: #333;
+        border-bottom: 3px solid #4caf50;
+        padding-bottom: 10px;
+      }
+      .recipe-card {
+        background-color: #fff;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 20px 0;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s;
+      }
+      .recipe-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+      }
+      .recipe-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 15px;
+      }
+      .recipe-title {
+        font-size: 24px;
+        font-weight: bold;
+        color: #2c3e50;
+        margin: 0;
+      }
+      .recipe-score {
+        background-color: #4caf50;
+        color: white;
+        padding: 5px 15px;
+        border-radius: 20px;
+        font-weight: bold;
+      }
+      .recipe-info {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 10px;
+        margin: 15px 0;
+        padding: 15px;
+        background-color: #f9f9f9;
+        border-radius: 5px;
+      }
+      .info-item {
+        display: flex;
+        align-items: center;
+      }
+      .info-label {
+        font-weight: bold;
+        color: #555;
+        margin-right: 10px;
+      }
+      .ingredients-section,
+      .steps-section {
+        margin: 20px 0;
+      }
+      .ingredients-list {
+        list-style: none;
+        padding: 0;
+      }
+      .ingredient-item {
+        padding: 8px;
+        margin: 5px 0;
+        background-color: #e8f5e9;
+        border-left: 4px solid #4caf50;
+        border-radius: 4px;
+      }
+      .ingredient-essential {
+        border-left-color: #f44336;
+        background-color: #ffebee;
+      }
+      .steps-list {
+        list-style: decimal;
+        padding-left: 20px;
+      }
+      .step-item {
+        padding: 10px;
+        margin: 8px 0;
+        background-color: #fff3e0;
+        border-radius: 4px;
+      }
+      .match-info {
+        background-color: #e3f2fd;
+        padding: 10px;
+        border-radius: 5px;
+        margin: 10px 0;
+        font-size: 14px;
+      }
+      .back-button {
+        display: inline-block;
+        margin: 20px 0;
+        padding: 10px 20px;
+        background-color: #2196f3;
+        color: white;
+        text-decoration: none;
+        border-radius: 5px;
+        transition: background-color 0.3s;
+      }
+      .back-button:hover {
+        background-color: #1976d2;
+      }
+      .no-recipes {
+        text-align: center;
+        padding: 40px;
+        color: #666;
+      }
+      .feedback-section {
+        margin-top: 20px;
+        padding: 15px;
+        background-color: #f9f9f9;
+        border-radius: 5px;
+        border-top: 2px solid #ddd;
+      }
+      .feedback-buttons {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        flex-wrap: wrap;
+      }
+      .made-button {
+        padding: 10px 20px;
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+        transition: background-color 0.3s;
+      }
+      .made-button:hover {
+        background-color: #45a049;
+      }
+      .rating-section {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+      .rating-label {
+        font-weight: bold;
+        color: #555;
+        margin-right: 5px;
+      }
+      .star-rating {
+        display: flex;
+        gap: 5px;
+      }
+      .star {
+        font-size: 24px;
+        color: #ddd;
+        cursor: pointer;
+        transition: color 0.2s;
+      }
+      .star:hover,
+      .star.active {
+        color: #ffd700;
+      }
+      .feedback-form {
+        display: inline-block;
+      }
+
+      /* 折りたたみ機能（PCでも折りたたみ） */
+      .toggle-details {
+        background-color: #2196f3;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        margin: 10px 0;
+        width: 100%;
+        transition: background-color 0.3s;
+      }
+      .toggle-details:hover {
+        background-color: #1976d2;
+      }
+      .recipe-card .recipe-details {
+        display: none;
+      }
+      .recipe-card.expanded .recipe-details {
+        display: block;
+      }
+
+      /* スマホ向けレスポンシブデザイン */
+      @media (max-width: 768px) {
+        body {
+          padding: 5px;
+          background-color: #f5f5f5;
+        }
+        .container {
+          padding: 10px;
+          border-radius: 5px;
+          margin: 0;
+        }
+        h1 {
+          font-size: 18px;
+          margin-bottom: 10px;
+          padding-bottom: 8px;
+        }
+        h2 {
+          font-size: 16px;
+          margin-top: 15px;
+          padding-bottom: 5px;
+        }
+        .back-button {
+          padding: 8px 16px;
+          font-size: 14px;
+          margin: 10px 0;
+        }
+
+        /* レシピカードをコンパクトに */
+        .recipe-card {
+          padding: 12px;
+          margin: 10px 0;
+          border-radius: 5px;
+        }
+        .recipe-header {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 8px;
+          margin-bottom: 10px;
+        }
+        .recipe-title {
+          font-size: 16px;
+          line-height: 1.3;
+        }
+        .recipe-score {
+          font-size: 12px;
+          padding: 4px 10px;
+          align-self: flex-end;
+        }
+
+        /* レシピ情報をコンパクトに */
+        .recipe-info {
+          grid-template-columns: 1fr;
+          gap: 5px;
+          padding: 10px;
+          margin: 10px 0;
+          font-size: 12px;
+        }
+        .info-item {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 2px;
+        }
+        .info-label {
+          font-size: 11px;
+          margin-right: 0;
+        }
+
+        /* 詳細情報は折りたたみ式 */
+        .recipe-details {
+          margin-top: 10px;
+        }
+        .ingredients-section,
+        .steps-section {
+          margin: 10px 0;
+        }
+        .ingredients-section h3,
+        .steps-section h3 {
+          font-size: 14px;
+          margin-bottom: 8px;
+        }
+        .ingredient-item {
+          padding: 6px;
+          margin: 3px 0;
+          font-size: 12px;
+        }
+        .step-item {
+          padding: 6px;
+          margin: 4px 0;
+          font-size: 12px;
+        }
+        .match-info {
+          padding: 8px;
+          font-size: 11px;
+          margin: 8px 0;
+        }
+
+        /* フィードバックセクションをコンパクトに */
+        .feedback-section {
+          padding: 10px;
+          margin-top: 10px;
+        }
+        .feedback-buttons {
+          flex-direction: column;
+          gap: 10px;
+        }
+        .made-button {
+          padding: 8px 16px;
+          font-size: 14px;
+          width: 100%;
+        }
+        .rating-section {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 5px;
+        }
+        .star {
+          font-size: 20px;
+        }
+
+        /* スマホでは詳細を折りたたむ */
+        .toggle-details {
+          display: block; /* スマホでは表示 */
+          background-color: #2196f3;
+          color: white;
+          border: none;
+          padding: 8px 16px;
+          border-radius: 5px;
+          cursor: pointer;
+          font-size: 14px;
+          margin: 10px 0;
+          width: 100%;
+        }
+        .toggle-details:hover {
+          background-color: #1976d2;
+        }
+        .recipe-card .recipe-details {
+          display: none;
+        }
+        .recipe-card.expanded .recipe-details {
+          display: block;
+        }
+      }
+
+      /* より小さいスマホ向け（480px以下） */
+      @media (max-width: 480px) {
+        body {
+          padding: 3px;
+        }
+        .container {
+          padding: 8px;
+        }
+        h1 {
+          font-size: 16px;
+        }
+        h2 {
+          font-size: 14px;
+        }
+        .recipe-card {
+          padding: 10px;
+        }
+        .recipe-title {
+          font-size: 14px;
+        }
+        .recipe-score {
+          font-size: 11px;
+          padding: 3px 8px;
+        }
+      }
+    </style>
+    <script>
+      function toggleRecipeDetails(button) {
+        const card = button.closest(".recipe-card");
+        card.classList.toggle("expanded");
+        button.textContent = card.classList.contains("expanded")
+          ? "詳細を閉じる ▲"
+          : "詳細を見る ▼";
+      }
+    </script>
+  </head>
+  <body>
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; border-bottom: 3px solid #4CAF50; padding-bottom: 10px;">
+            <div>
+                <h1 style="margin: 0; border: none; margin-bottom: 10px;">🍳 週間レシピ提案（5回分）</h1>
+                <a href="/" class="back-button" style="margin: 0;">← 在庫一覧に戻る</a>
+            </div>
+            <div>
+                 <img src="{{ url_for('static', filename='images/mascot.png') }}" alt="シェフ" style="max-height: 150px; width: auto; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));">
+            </div>
+        </div>
+
+      {% macro recipe_card(recipe, label) %}
+      <div class="recipe-card">
+        <div class="recipe-header">
+          <h2 class="recipe-title"><span style="font-size: 0.8em; color: #666;">{{ label }}:</span> {{ recipe.title }}</h2>
+          <span class="recipe-score">マッチ度: {{ "%.1f"|format(recipe.score) }}</span>
+        </div>
+
+        <div class="recipe-info">
+          <div class="info-item">
+            <span class="info-label">ジャンル:</span>
+            <span>{{ recipe.genre }}</span>
+          </div>
+          {% if recipe.total_time %}
+          <div class="info-item">
+            <span class="info-label">調理時間:</span>
+            <span>{{ recipe.total_time }}分</span>
+          </div>
+          {% endif %}
+        </div>
+
+        <button class="toggle-details" onclick="toggleRecipeDetails(this)">
+          詳細を見る ▼
+        </button>
+
+        <div class="recipe-details">
+          {% if recipe.match_details %}
+          <div class="match-info">
+            <strong>マッチした食材:</strong>
+            {% if recipe.match_details.matched_essential %}
+            <br />必須食材: {% for ing in recipe.match_details.matched_essential %} {{ ing.name }}{% if not loop.last %}, {% endif %} {% endfor %}
+            {% endif %}
+            {% if recipe.match_details.matched_optional %}
+            <br />オプション食材: {% for ing in recipe.match_details.matched_optional %} {{ ing.name }}{% if not loop.last %}, {% endif %} {% endfor %}
+            {% endif %}
+            {% if recipe.match_details.match_rate is defined %}
+            <br /><small>マッチ率: {{ "%.0f"|format(recipe.match_details.match_rate * 100) }}%</small>
+            {% endif %}
+            {% if recipe.match_details.similarity is defined %}
+            <br /><small>類似度: {{ "%.2f"|format(recipe.match_details.similarity * 100) }}%</small>
+            {% endif %}
+          </div>
+          {% endif %}
+
+          {% if recipe.ingredients %}
+          <div class="ingredients-section">
+            <h3>材料</h3>
+            <ul class="ingredients-list">
+              {% for ing in recipe.ingredients %}
+              <li class="ingredient-item {% if ing.is_essential %}ingredient-essential{% endif %}">
+                <strong>{{ ing.name }}</strong>
+                {% if ing.quantity and ing.quantity != '' and ing.quantity|string|lower != 'nan' %}{{ ing.quantity }}{% endif %}
+                {% if ing.unit and ing.unit != '' and ing.unit|string|lower != 'nan' %} {{ ing.unit }}{% endif %}
+                {% if ing.is_essential %}<span style="color: #f44336">（必須）</span>{% endif %}
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+
+          {% if recipe.steps %}
+          <div class="steps-section">
+            <h3>調理手順</h3>
+            <ol class="steps-list">
+              {% for step in recipe.steps %}
+              <li class="step-item">{{ step.description }}</li>
+              {% endfor %}
+            </ol>
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- フィードバックセクション -->
+        <div class="feedback-section">
+          <div class="feedback-buttons">
+            <form action="/feedback" method="POST" class="feedback-form">
+              <input type="hidden" name="recipe_id" value="{{ recipe.recipe_id }}" />
+              <input type="hidden" name="recipe_title" value="{{ recipe.title }}" />
+              <input type="hidden" name="feedback_type" value="made" />
+              <button type="submit" class="made-button">
+                ✅ このレシピを作りました
+              </button>
+            </form>
+
+            <div class="rating-section">
+              <span class="rating-label">評価:</span>
+              <div class="star-rating">
+                <form action="/feedback" method="POST" id="rating-form-{{ recipe.recipe_id }}" class="feedback-form" style="display: none">
+                  <input type="hidden" name="recipe_id" value="{{ recipe.recipe_id }}" />
+                  <input type="hidden" name="recipe_title" value="{{ recipe.title }}" />
+                  <input type="hidden" name="feedback_type" value="rating" />
+                  <input type="hidden" name="rating" id="rating-value-{{ recipe.recipe_id }}" value="" />
+                </form>
+                {% for i in range(1, 6) %}
+                <span class="star" onclick="document.getElementById('rating-value-{{ recipe.recipe_id }}').value='{{ i }}'; document.getElementById('rating-form-{{ recipe.recipe_id }}').submit();">★</span>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endmacro %}
+
+      {% if daily_menus %}
+        {% for menu in daily_menus %}
+        <div class="day-section" style="margin-top: 40px;">
+            <h2 style="background-color: #e3f2fd; padding: 10px; border-left: 5px solid #2196f3; border-radius: 4px;">🗓️ {{ menu.day }}日目の献立</h2>
+            
+            {% if menu.main_dish %}
+                {{ recipe_card(menu.main_dish, "主菜") }}
+            {% endif %}
+            
+            {% if menu.side_dish %}
+                {{ recipe_card(menu.side_dish, "副菜") }}
+            {% endif %}
+        </div>
+        <hr style="border: 0; border-top: 2px dashed #ddd; margin: 30px 0;">
+        {% endfor %}
+        
+      {% else %}
+        <div class="no-recipes">
+          <h2>レシピが見つかりませんでした</h2>
+          {% if message %}
+          <p>{{ message }}</p>
+          {% else %}
+          <p>在庫に食材がないか、マッチするレシピがありませんでした。</p>
+          {% endif %}
+          <div style="margin-top: 20px;">
+            <p>※在庫切れや、条件に合うレシピがない可能性があります。</p>
+          </div>
+        </div>
+      {% endif %}
+
+      <a href="/" class="back-button">← 在庫一覧に戻る</a>
+    </div>
+  </body>
+</html>
