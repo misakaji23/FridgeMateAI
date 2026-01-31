@@ -39,13 +39,9 @@ DATABASE = os.path.join(EXE_DIR, "inventory.db")
 app = Flask(__name__)
 
 # レシピ推薦システムの初期化
-# Excelファイルは読み込み専用なので resource_path で取得
-RECIPE_DB_PATH = resource_path("レシピdb.xlsx")
-INGREDIENTS_PATH = resource_path("分量・材料.xlsx")
-STEPS_PATH = resource_path("調理手順.xlsx")
-
+# データベース(inventory.db)を使用
 try:
-    recommender = MLRecipeRecommender(RECIPE_DB_PATH, INGREDIENTS_PATH, STEPS_PATH)
+    recommender = MLRecipeRecommender(DATABASE)
     print("機械学習レシピ推薦システムを初期化しました")
 except Exception as e:
     print(f"レシピデータの読み込みエラー: {e}")
