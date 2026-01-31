@@ -12,42 +12,72 @@ warnings.filterwarnings('ignore')
 class MLRecipeRecommender:
     """機械学習ベースのレシピ推薦システム - 特徴量から学習されたモデルを使用"""
     
-    def __init__(self, recipe_db_path: str, ingredients_path: str, steps_path: str):
+    def __init__(self, db_path: str):
         """
         レシピデータを読み込んで機械学習モデルを構築
         
         Args:
-            recipe_db_path: レシピdb.xlsxのパス
-            ingredients_path: 分量・材料.xlsxのパス
-            steps_path: 調理手順.xlsxのパス
+            db_path: データベース(inventory.db)のパス
         """
-        self.recipe_db_path = recipe_db_path
-        self.ingredients_path = ingredients_path
-        self.steps_path = steps_path
+        self.db_path = db_path
         
-        # Excelファイルを読み込む
-        self.recipes_df = pd.read_excel(recipe_db_path, sheet_name='レシピdb')
-        self.ingredients_df = pd.read_excel(ingredients_path, sheet_name='分量・材料')
-        self.steps_df = pd.read_excel(steps_path, sheet_name='調理手順')
+        # データベースからデータを読み込む
+        import sqlite3
+        conn = sqlite3.connect(self.db_path)
+        
+        try:
+            # テーブルからデータをDataFrameとして読み込む
+            # Excelの構造に合わせて列名を調整する（後方互換性のため）
+            
+            # レシピデータ
+            self.recipes_df = pd.read_sql("SELECT * FROM recipes", conn)
+            # カラム名をMLモデルが期待する形式にリネーム
+            self.recipes_df = self.recipes_df.rename(columns={
+                'id': 'Recipe_ID',
+                'title': 'Title',
+                'genre': 'Genre',
+                'prep_time': 'Prep_Time_Min',
+                'cook_time': 'Cook_Time_Min',
+                'servings': 'Servings',
+                'calorie': 'Calorie'
+                # method is not in DB schema yet? let's check schema.sql. 
+                # schema.sql has no 'method' or 'description' in 'recipes' table.
+                # However, there is 'recipe_steps' table.
+                # The original Excel had 'Method_Main'. 
+                # The 'recipe_steps' table has 'description'.
+            })
+            
+            # 材料データ
+            self.ingredients_df = pd.read_sql("SELECT * FROM recipe_ingredients", conn)
+            self.ingredients_df = self.ingredients_df.rename(columns={
+                'recipe_id': 'Recipe_ID',
+                'name': 'Ingredient_Name_Normalized',
+                'quantity': 'Quantity_Amount',
+                'unit': 'Quantity_Unit',
+                'is_essential': 'Is_Essential'
+            })
+            
+            # 手順データ
+            self.steps_df = pd.read_sql("SELECT * FROM recipe_steps", conn)
+            self.steps_df = self.steps_df.rename(columns={
+                'recipe_id': 'Recipe_ID',
+                'step_number': 'Step_Number',
+                'description': 'Step_Description'
+            })
+            
+        finally:
+            conn.close()
         
         # データの前処理
         self._preprocess_data()
         
         # 特徴量エンジニアリング
         self._build_feature_vectors()
-    
+
     def _preprocess_data(self):
         """データの前処理"""
-        # Recipe_IDを文字列に統一（ヘッダー行を除外）
-        self.ingredients_df = self.ingredients_df[
-            self.ingredients_df['Recipe_ID'].astype(str).str.isdigit()
-        ].copy()
-        self.steps_df = self.steps_df[
-            self.steps_df['Recipe_ID'].astype(str).str.isdigit()
-        ].copy()
-        self.recipes_df = self.recipes_df[
-            self.recipes_df['Recipe_ID'].astype(str).str.isdigit()
-        ].copy()
+        # DBからは適切な型で取得できるため、Excel特有の文字列クリーニングは不要だが
+        # 念のため型変換とNaN処理は残しておく
         
         # Recipe_IDを数値型に変換
         self.ingredients_df['Recipe_ID'] = pd.to_numeric(self.ingredients_df['Recipe_ID'], errors='coerce')

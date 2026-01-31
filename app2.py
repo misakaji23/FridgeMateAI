@@ -202,6 +202,78 @@ def recipes():
         error_msg = f"<h2>エラーが発生しました</h2><p>{str(e)}</p><pre>{traceback.format_exc()}</pre><a href='/'>在庫一覧に戻る</a>"
         return error_msg, 500
 
+# レシピ登録機能
+@app.route("/add_recipe", methods=["GET", "POST"])
+def add_recipe():
+    if request.method == "GET":
+        return render_template("add_recipe.html")
+    
+    try:
+        # フォームからデータを取得
+        title = request.form.get("title")
+        genre = request.form.get("genre")
+        servings = request.form.get("servings")
+        prep_time = request.form.get("prep_time")
+        cook_time = request.form.get("cook_time")
+        calorie = request.form.get("calorie")
+        
+        # 必須チェック
+        if not title:
+            return "レシピ名は必須です。", 400
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # 1. recipesテーブルに挿入
+        cursor.execute(
+            "INSERT INTO recipes (title, genre, prep_time, cook_time, servings, calorie, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (title, genre, prep_time, cook_time, servings, calorie, datetime.now())
+        )
+        recipe_id = cursor.lastrowid
+        
+        # 2. recipe_ingredientsテーブルに挿入
+        ingredients = []
+        # request.formのキーを解析して材料データを構築
+        # ingredients[0][name], ingredients[0][quantity] などの形式
+        import re
+        ingredient_keys = [k for k in request.form.keys() if k.startswith("ingredients[")]
+        ingredient_indices = set()
+        for k in ingredient_keys:
+            match = re.search(r"ingredients\[(\d+)\]", k)
+            if match:
+                ingredient_indices.add(int(match.group(1)))
+        
+        for i in sorted(ingredient_indices):
+            name = request.form.get(f"ingredients[{i}][name]")
+            if name: # 名前がある場合のみ登録
+                quantity = request.form.get(f"ingredients[{i}][quantity]")
+                unit = request.form.get(f"ingredients[{i}][unit]")
+                is_essential = 1 if request.form.get(f"ingredients[{i}][is_essential]") else 0
+                
+                cursor.execute(
+                    "INSERT INTO recipe_ingredients (recipe_id, name, quantity, unit, is_essential) VALUES (?, ?, ?, ?, ?)",
+                    (recipe_id, name, quantity, unit, is_essential)
+                )
+
+        # 3. recipe_stepsテーブルに挿入
+        steps = request.form.getlist("steps[]")
+        for index, description in enumerate(steps):
+            if description.strip(): # 空の手順はスキップ
+                cursor.execute(
+                    "INSERT INTO recipe_steps (recipe_id, step_number, description) VALUES (?, ?, ?)",
+                    (recipe_id, index + 1, description)
+                )
+        
+        conn.commit()
+        conn.close()
+        
+        return redirect(url_for("recipes")) # 登録後はレシピ一覧へ（またはトップへ）
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return f"エラーが発生しました: {e}", 500
+
 # レシピフィードバック保存
 @app.route("/feedback", methods=["POST"])
 def save_feedback():

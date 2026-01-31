@@ -398,9 +398,12 @@
         <div class="header-actions" style="display: flex; justify-content: space-between; align-items: flex-start;">
             <div style="flex: 1;">
                 <h1 style="margin: 0; margin-bottom: 15px;">📦 在庫一覧</h1>
-                <form action="/recipes" method="get" style="display:inline;">
-                    <button type="submit" class="btn btn-primary" style="margin: 0;">🍳 レシピ提案を見る</button>
-                </form>
+                <div style="display: flex; gap: 10px;">
+                    <form action="/recipes" method="get" style="display:inline;">
+                        <button type="submit" class="btn btn-primary" style="margin: 0;">🍳 レシピ提案を見る</button>
+                    </form>
+                    <a href="/add_recipe" class="btn btn-primary" style="margin: 0; background-color: #4CAF50; text-decoration: none; display: inline-flex; align-items: center; justify-content: center;">📝 レシピを登録</a>
+                </div>
             </div>
             
             <!-- QRコード表示エリア -->
