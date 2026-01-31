@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登録レシピ一覧 - FridgemateAI</title>
+    <style>
+        body {
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            border-bottom: 3px solid #4CAF50;
+            padding-bottom: 10px;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .header-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            text-decoration: none;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+
+        .btn-primary {
+            background-color: #2196F3;
+        }
+
+        .btn-primary:hover {
+            background-color: #1976D2;
+        }
+
+        .btn-success {
+            background-color: #4CAF50;
+        }
+
+        .btn-success:hover {
+            background-color: #45a049;
+        }
+
+        .btn-danger {
+            background-color: #f44336;
+        }
+
+        .btn-danger:hover {
+            background-color: #d32f2f;
+        }
+
+        .btn-warning {
+            background-color: #ff9800;
+        }
+
+        .btn-warning:hover {
+            background-color: #f57c00;
+        }
+
+        .recipe-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        .recipe-table th,
+        .recipe-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .recipe-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+            color: #555;
+        }
+
+        .recipe-table tr:hover {
+            background-color: #f1f1f1;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header-actions">
+            <h1>📚 登録レシピ一覧</h1>
+            <div>
+                <a href="/add_recipe" class="btn btn-success">📝 新規登録</a>
+                <a href="/" class="btn btn-primary">🏠 TOPへ戻る</a>
+            </div>
+        </div>
+
+        {% if recipes %}
+        <table class="recipe-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>レシピ名</th>
+                    <th>ジャンル</th>
+                    <th>調理時間</th>
+                    <th>人数</th>
+                    <th>登録日</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for recipe in recipes %}
+                <tr>
+                    <td>{{ recipe.id }}</td>
+                    <td style="font-weight: bold;">{{ recipe.title }}</td>
+                    <td>{{ recipe.genre }}</td>
+                    <td>約 {{ (recipe.prep_time or 0) + (recipe.cook_time or 0) }} 分</td>
+                    <td>{{ recipe.servings }}人分</td>
+                    <td>{{ recipe.created_at[:10] }}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <a href="{{ url_for('edit_recipe', recipe_id=recipe.id) }}" class="btn btn-warning">編集</a>
+                            <form action="{{ url_for('delete_recipe', recipe_id=recipe.id) }}" method="POST"
+                                style="display:inline;">
+                                <button type="submit" class="btn btn-danger"
+                                    onclick="return confirm('本当に「{{ recipe.title }}」を削除しますか？');">削除</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div style="text-align: center; padding: 50px; color: #666;">
+            <p>登録されたレシピはありません。</p>
+            <a href="/add_recipe" class="btn btn-success">最初のレシピを登録する</a>
+        </div>
+        {% endif %}
+    </div>
+</body>
+
+</html>

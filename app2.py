@@ -270,6 +270,121 @@ def add_recipe():
         traceback.print_exc()
         return f"エラーが発生しました: {e}", 500
 
+# レシピ一覧表示
+@app.route("/recipe_list")
+def recipe_list():
+    try:
+        conn = get_db_connection()
+        recipes = conn.execute("SELECT * FROM recipes ORDER BY created_at DESC").fetchall()
+        conn.close()
+        return render_template("recipe_list.html", recipes=recipes)
+    except Exception as e:
+        return f"エラーが発生しました: {e}", 500
+
+# レシピ編集
+@app.route("/edit_recipe/<int:recipe_id>", methods=["GET", "POST"])
+def edit_recipe(recipe_id):
+    conn = get_db_connection()
+    
+    if request.method == "GET":
+        recipe = conn.execute("SELECT * FROM recipes WHERE id = ?", (recipe_id,)).fetchone()
+        if not recipe:
+            conn.close()
+            return "レシピが見つかりません", 404
+            
+        ingredients = conn.execute("SELECT * FROM recipe_ingredients WHERE recipe_id = ? ORDER BY id", (recipe_id,)).fetchall()
+        steps = conn.execute("SELECT * FROM recipe_steps WHERE recipe_id = ? ORDER BY step_number", (recipe_id,)).fetchall()
+        conn.close()
+        
+        return render_template("edit_recipe.html", recipe=recipe, ingredients=ingredients, steps=steps)
+    
+    # POST: 更新処理
+    try:
+        title = request.form.get("title")
+        genre = request.form.get("genre")
+        servings = request.form.get("servings")
+        prep_time = request.form.get("prep_time")
+        cook_time = request.form.get("cook_time")
+        calorie = request.form.get("calorie")
+        
+        if not title:
+            return "レシピ名は必須です。", 400
+
+        cursor = conn.cursor()
+        
+        # 1. recipesテーブル更新
+        cursor.execute(
+            """UPDATE recipes SET title=?, genre=?, prep_time=?, cook_time=?, servings=?, calorie=? 
+               WHERE id=?""",
+            (title, genre, prep_time, cook_time, servings, calorie, recipe_id)
+        )
+        
+        # 2. recipe_ingredients更新 (一度削除して再登録が簡単)
+        cursor.execute("DELETE FROM recipe_ingredients WHERE recipe_id = ?", (recipe_id,))
+        
+        import re
+        ingredient_keys = [k for k in request.form.keys() if k.startswith("ingredients[")]
+        ingredient_indices = set()
+        for k in ingredient_keys:
+            match = re.search(r"ingredients\[(.*?)\].*", k) # Use non-greedy match and allow string indices (e.g. new_...)
+            if match:
+                # 複雑なキー構造に対応するため、インデックス部分を慎重に抽出
+                # ingredients[key][field]
+                parts = k.split('[')
+                if len(parts) >= 2:
+                    idx = parts[1].split(']')[0]
+                    ingredient_indices.add(idx)
+        
+        for i in ingredient_indices:
+            name = request.form.get(f"ingredients[{i}][name]")
+            if name: 
+                quantity = request.form.get(f"ingredients[{i}][quantity]")
+                unit = request.form.get(f"ingredients[{i}][unit]")
+                is_essential = 1 if request.form.get(f"ingredients[{i}][is_essential]") else 0
+                
+                cursor.execute(
+                    "INSERT INTO recipe_ingredients (recipe_id, name, quantity, unit, is_essential) VALUES (?, ?, ?, ?, ?)",
+                    (recipe_id, name, quantity, unit, is_essential)
+                )
+
+        # 3. recipe_steps更新 (一度削除して再登録)
+        cursor.execute("DELETE FROM recipe_steps WHERE recipe_id = ?", (recipe_id,))
+        
+        steps = request.form.getlist("steps[]")
+        for index, description in enumerate(steps):
+            if description.strip(): 
+                cursor.execute(
+                    "INSERT INTO recipe_steps (recipe_id, step_number, description) VALUES (?, ?, ?)",
+                    (recipe_id, index + 1, description)
+                )
+        
+        conn.commit()
+        conn.close()
+        return redirect(url_for("recipe_list"))
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return f"エラーが発生しました: {e}", 500
+
+# レシピ削除
+@app.route("/delete_recipe/<int:recipe_id>", methods=["POST"])
+def delete_recipe(recipe_id):
+    try:
+        conn = get_db_connection()
+        # カスケード削除が設定されていれば親だけで消えるが、念のため関連データも削除
+        # (SQLiteのデフォルト設定に依存しないように明示的に削除)
+        conn.execute("DELETE FROM recipe_ingredients WHERE recipe_id = ?", (recipe_id,))
+        conn.execute("DELETE FROM recipe_steps WHERE recipe_id = ?", (recipe_id,))
+        conn.execute("DELETE FROM recipe_feedback WHERE recipe_id = ?", (recipe_id,))
+        conn.execute("DELETE FROM recipes WHERE id = ?", (recipe_id,))
+        
+        conn.commit()
+        conn.close()
+        return redirect(url_for("recipe_list"))
+    except Exception as e:
+        return f"エラーが発生しました: {e}", 500
+
 # レシピフィードバック保存
 @app.route("/feedback", methods=["POST"])
 def save_feedback():
