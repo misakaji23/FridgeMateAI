@@ -51,7 +51,7 @@ except Exception as e:
 
 #DB接続 SQLiteに接続し、行データを辞書形式で扱えるように設定
 def get_db_connection():
-    conn = sqlite3.connect('inventory.db')
+    conn = sqlite3.connect(DATABASE)
     conn.row_factory = sqlite3.Row
     return conn
 #DB接続の終了(データベースへの接続を常に適切に終了させる)
@@ -161,7 +161,11 @@ def decrease(item_id):
 def recipes():
     try:
         if recommender is None:
-            return "レシピデータの読み込みに失敗しました。", 500
+            return render_template(
+                "recipes.html",
+                daily_menus=[],
+                message="レシピデータの読み込みに失敗しました。在庫一覧に戻ってください。",
+            )
         
         conn = get_db_connection()
         items = conn.execute("SELECT * FROM items WHERE quantity > 0").fetchall()
@@ -273,8 +277,15 @@ def add_recipe():
 def recipe_list():
     try:
         conn = get_db_connection()
-        recipes = conn.execute("SELECT * FROM recipes ORDER BY created_at DESC").fetchall()
+        rows = conn.execute("SELECT * FROM recipes ORDER BY created_at DESC").fetchall()
         conn.close()
+        # テンプレートで .id / .title 等を安全に参照できるよう辞書のリストに変換
+        recipes = []
+        for row in rows:
+            r = dict(row)
+            if r.get("created_at") is not None:
+                r["created_at"] = str(r["created_at"])
+            recipes.append(r)
         return render_template("recipe_list.html", recipes=recipes)
     except Exception as e:
         return f"エラーが発生しました: {e}", 500
