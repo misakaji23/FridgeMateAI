@@ -179,9 +179,7 @@ def recipes():
         
         if not inventory_items:
             return render_template("recipes.html", 
-                                 main_dishes=[], 
-                                 side_dishes=[], 
-                                 other_dishes=[],
+                                 daily_menus=[],
                                  message="在庫に食材がありません。")
         
         # 5日分の献立を提案（在庫消費シミュレーション付き）
